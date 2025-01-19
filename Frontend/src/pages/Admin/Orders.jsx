@@ -11,7 +11,7 @@ const Orders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch("http://localhost:5001/api/dispatch");
+        const response = await fetch("http://localhost:5001/api/orders");
         if (!response.ok) {
           throw new Error("Failed to fetch orders");
         }
@@ -29,22 +29,26 @@ const Orders = () => {
 
   // Handle status change (for the select dropdown)
   const handleStatusChange = async (id, newStatus) => {
+    // Optimistically update the status in the UI
+    const updatedOrders = orders.map((order) =>
+      order._id === id ? { ...order, status: newStatus } : order
+    );
+    setOrders(updatedOrders);
+  
     try {
-      const response = await fetch(`http://localhost:5001/api/dispatch/${id}`, {
+      const response = await fetch(`http://localhost:5001/api/orders/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          status: newStatus,
-          // Only include the fields you want to update
-        }),
+        body: JSON.stringify({ status: newStatus }),
       });
-
+  
       if (!response.ok) {
         throw new Error("Failed to update status");
       }
-
+  
+      // Optionally fetch the updated order from the server (not strictly necessary if the update is successful)
       const updatedOrder = await response.json();
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
@@ -53,13 +57,16 @@ const Orders = () => {
       );
     } catch (error) {
       console.error("Error updating status:", error);
+      // Revert status if the request fails
+      setOrders(orders);
     }
   };
+  
 
   // Handle priority change (for the select dropdown)
   const handlePriorityChange = async (id, newPriority) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/dispatch/${id}`, {
+      const response = await fetch(`http://localhost:5001/api/orders/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +94,7 @@ const Orders = () => {
   // Handle action change (for the select dropdown)
   const handleActionChange = async (id, newAction) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/dispatch/${id}`, {
+      const response = await fetch(`http://localhost:5001/api/orders/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';  // Add this line at the top of your file
+
 import Order from "../models/orderSchema.js";
 import Item from '../models/inventoryModal.js'; 
 
@@ -53,50 +55,26 @@ export const createOrder = async (req, res) => {
 // API controller to update order status and quantities
 export const updateOrder = async (req, res) => {
   const orderId = req.params.id;
-  const { manufactured, rejected } = req.body;
 
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    return res.status(400).json({ message: 'Invalid Order ID' });
+  }
+
+  const { manufactured, rejected } = req.body;
   try {
-    // Fetch the order by ID
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Validate: Manufactured cannot exceed the ordered quantity
-    if (manufactured !== undefined && manufactured > order.quantity) {
-      return res.status(400).json({
-        message: 'Manufactured quantity cannot exceed the ordered quantity',
-      });
-    }
-
-    // Calculate changes in manufactured and rejected quantities
-    const increaseInManufactured = manufactured !== undefined ? manufactured - order.manufactured : 0;
-    const increaseInRejected = rejected !== undefined ? rejected - order.rejected : 0;
-
-    const totalIncrease = increaseInManufactured + increaseInRejected;
-
-    // Update the order's manufactured and rejected quantities
-    if (manufactured !== undefined) {
-      order.manufactured = manufactured;
-    }
-    if (rejected !== undefined) {
-      order.rejected = rejected;
-    }
-
-    // Save the updated order
-    await order.save();
-
-    // Adjust inventory based on the total increase
-    if (totalIncrease > 0) {
-      await updateInventoryBasedOnOrderIngredients(order, totalIncrease);
-    }
-
-    res.status(200).json({ message: 'Order quantities updated successfully', order });
+    // Continue with the update logic...
   } catch (error) {
     console.error('Error updating order:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
+
 
 async function updateInventoryBasedOnOrderIngredients(order, totalDecrease) {
   try {
