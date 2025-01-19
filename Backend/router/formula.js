@@ -1,6 +1,6 @@
 import express from 'express';
 import Formula from '../models/formulaModal.js';
-import axios from 'axios'
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -23,6 +23,16 @@ router.post('/:id/log', async (req, res) => {
     const formula = await Formula.findById(id);
     if (!formula) return res.status(404).json({ message: 'Formula not found' });
 
+    // Calculate the total batch weight for this log entry
+    const totalBatchWeight = batchWeight * numberOfBatches;
+
+    // Get the previous balance (if any), or set it to 0 if this is the first log
+    const lastLog = formula.logs[formula.logs.length - 1];
+    const previousBalance = lastLog ? lastLog.balance : 0;
+
+    // Calculate the new balance by adding the total batch weight to the previous balance
+    const newBalance = previousBalance + totalBatchWeight;
+
     // Create new log entry
     const newLog = {
       date,
@@ -35,6 +45,7 @@ router.post('/:id/log', async (req, res) => {
       numberOfBatches,
       remarks,
       selectedFormulaId: id,
+      balance: newBalance, // Set the new balance here
     };
 
     // Add log to formula's logs array
@@ -70,25 +81,45 @@ const logIngredientUsage = async (ingredients, numberOfBatches, orderNo, remarks
       console.error('Error logging ingredient usage in inventory:', error);
     }
   }
-}
+};
+
+// Get formula logs by name
 // Get formula logs by name
 router.get("/logs/:name", async (req, res) => {
-    const { name } = req.params;
-  
-    try {
-      // Find the formula by its name
-      const formula = await Formula.findOne({ name });
-  
-      if (!formula) {
-        return res.status(404).json({ message: "Formula not found" });
-      }
-  
-      // Return the logs of the formula
-      res.json({ logs: formula.logs });
-    } catch (err) {
-      res.status(500).json({ message: "Error retrieving formula logs", error: err });
+  const { name } = req.params;
+
+  try {
+    // Find the formula by its name
+    const formula = await Formula.findOne({ name });
+
+    if (!formula) {
+      return res.status(404).json({ message: "Formula not found" });
     }
-  });
-  
+
+    // Retrieve all logs for the formula
+    const logs = formula.logs;
+
+    // Calculate the balance for each log entry
+    let runningBalance = 0;
+
+    const updatedLogs = logs.map(log => {
+      const totalBatchWeight = log.batchWeight * log.numberOfBatches;
+      runningBalance += totalBatchWeight;
+
+      // Add the balance field to each log entry
+      return {
+        ...log.toObject(),  // Convert mongoose document to plain object
+        balance: runningBalance
+      };
+    });
+
+    // Return the logs with balance
+    res.json({ logs: updatedLogs });
+
+  } catch (err) {
+    res.status(500).json({ message: "Error retrieving formula logs", error: err });
+  }
+});
+
 
 export default router;

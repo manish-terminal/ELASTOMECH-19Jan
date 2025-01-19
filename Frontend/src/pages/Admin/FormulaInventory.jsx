@@ -360,29 +360,32 @@ const FormulaInventory = () => {
           Formula Logs
         </h3>
         <table className="w-full text-left table-auto">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="px-4 py-2">Order No.</th>
-              <th className="px-4 py-2">Shift</th>
-              <th className="px-4 py-2">Batch No.</th>
-              <th className="px-4 py-2">Batch Weight (kg)</th>
-              <th className="px-4 py-2">Number of Batches</th>
-              <th className="px-4 py-2">Remarks</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log, index) => (
-              <tr key={index} className="border-b">
-                <td className="px-4 py-2">{log.orderNo}</td>
-                <td className="px-4 py-2">{log.shift}</td>
-                <td className="px-4 py-2">{log.batchNo}</td>
-                <td className="px-4 py-2">{log.batchWeight}</td>
-                <td className="px-4 py-2">{log.numberOfBatches}</td>
-                <td className="px-4 py-2">{log.remarks}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  <thead>
+    <tr className="bg-gray-200">
+      <th className="px-4 py-2">Order No.</th>
+      <th className="px-4 py-2">Shift</th>
+      <th className="px-4 py-2">Batch No.</th>
+      <th className="px-4 py-2">Batch Weight (kg)</th>
+      <th className="px-4 py-2">Number of Batches</th>
+      <th className="px-4 py-2">Remarks</th>
+      <th className="px-4 py-2">Balance (kg)</th> {/* Added Balance Column */}
+    </tr>
+  </thead>
+  <tbody>
+    {logs.map((log, index) => (
+      <tr key={index} className="border-b">
+        <td className="px-4 py-2">{log.orderNo}</td>
+        <td className="px-4 py-2">{log.shift}</td>
+        <td className="px-4 py-2">{log.batchNo}</td>
+        <td className="px-4 py-2">{log.batchWeight}</td>
+        <td className="px-4 py-2">{log.numberOfBatches}</td>
+        <td className="px-4 py-2">{log.remarks}</td>
+        <td className="px-4 py-2">{log.balance}</td> {/* Display Balance */}
+      </tr>
+    ))}
+  </tbody>
+</table>
+
       </div>
     </div>
   );

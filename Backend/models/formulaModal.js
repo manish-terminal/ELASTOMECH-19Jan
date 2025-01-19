@@ -10,7 +10,7 @@ const formulaLogSchema = new mongoose.Schema({
   numberOfBatches: { type: Number, required: true },
   remarks: { type: String },
   selectedFormulaId: { type: mongoose.Schema.Types.ObjectId, ref: "Formula" },
-  balance: { type: Number, default: 0 },
+  balance: { type: Number, },
 });
 const formulaSchema = new mongoose.Schema({
   name: { type: String, required: true },
