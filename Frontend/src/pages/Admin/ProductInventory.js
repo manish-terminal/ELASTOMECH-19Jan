@@ -10,6 +10,8 @@ const ProductInventory = () => {
     outward: 0,
     remarks: "",
   });
+  const[inward,setInward]=useState(0);
+  
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -35,11 +37,17 @@ const ProductInventory = () => {
   const fetchLogs = useCallback(async (productId) => {
     setLoading(true);
     try {
+      
       const response = await fetch(
         `http://localhost:5001/api/products/${productId}/logs`
       );
+      const proddata = await fetch(
+        `http://localhost:5001/api/products/${productId}`
+      );
+      const pdata = await proddata.json();
       const data = await response.json();
-      setLogs(data.logs || []);
+   
+      setLogs(pdata.product.transactionLogs || []);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -66,6 +74,11 @@ const ProductInventory = () => {
       return;
     }
   
+    if (transaction.inward === 0 && transaction.outward === 0) {
+      alert("Both inward and outward quantities cannot be zero.");
+      return;
+    }
+  
     if (!transaction.particulars) {
       alert("Particulars are required.");
       return;
@@ -73,10 +86,13 @@ const ProductInventory = () => {
   
     setLoading(true);
     setErrorMessage("");
-    console.log(selectedProductId);
   
     try {
-      // 1. First API call to log the transaction for the selected product
+      // Log the product transaction
+      const proddata = await fetch(
+        `http://localhost:5001/api/products/${selectedProductId}`
+      );
+      const pdata = await proddata.json();
       const productResponse = await fetch(
         `http://localhost:5001/api/products/${selectedProductId}/log`,
         {
@@ -87,51 +103,69 @@ const ProductInventory = () => {
       );
   
       if (!productResponse.ok) {
-        throw new Error("Failed to log product transaction.");
+        const errorDetails = await productResponse.json();
+        throw new Error(errorDetails.message || "Failed to log product transaction.");
       }
   
       const updatedProduct = await productResponse.json();
+      console.log(updatedProduct)
       setLogs(updatedProduct.logs || []);
   
-      // 2. Loop through the formulations array and log each formula transaction
-      const formulations = updatedProduct.formulations || [];
-      for (const formula of formulations) {
+      // Log formula transactions concurrently
+      const formulations = pdata.product.formulations || [];
+      console.log('Formulations:', formulations);  // Debug formulation data
+      const formulaPromises = formulations.map(async (formula) => {
         const formulaId = formula.formulaName;
         const formulaFillWeight = formula.fillWeight;
-        
-        // You can add more details to the body if needed, such as inward quantity.
+  
         const formulaTransaction = {
-          inward: transaction.inward, // Include inward quantity here
-          particulars: transaction.particulars, // Include particulars
+          orderNo: transaction.particulars,
+          inward: transaction.inward,
+          outward:transaction.outward,
+          particulars: "deducted automatically.",
           fillWeight: formulaFillWeight,
         };
+        console.log(formulaTransaction);  // Debug formula transaction data
   
-        // 2.1 API call to log the formula-specific transaction
-        const formulaResponse = await fetch(
-          `http://localhost:5001/api/${formulaId}/logformulafromproduct`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formulaTransaction),
+        try {
+          const response = await fetch(
+            `http://localhost:5001/api/formulas/${formulaId}/logformulafromproduct`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formulaTransaction),
+            }
+          );
+  
+          if (!response.ok) {
+            const errorDetails = await response.json();
+            throw new Error(`Error logging formula ${formulaId}: ${errorDetails.message || "Unknown error"}`);
           }
-        );
   
-        if (!formulaResponse.ok) {
-          console.error(`Failed to log formula transaction for formula ${formulaId}`);
-        } else {
-          console.log(`Formula transaction for formula ${formulaId} logged successfully.`);
+          console.log(`Formula ${formulaId} logged successfully`);
+        } catch (error) {
+          console.error(error.message);  // Detailed error logging
+          return `Formula ${formulaId} failed: ${error.message}`;
         }
+      });
+  
+      const formulaResults = await Promise.all(formulaPromises);
+      const errors = formulaResults.filter((result) => result); // Collect errors
+      if (errors.length) {
+        console.error("Some formula transactions failed:", errors);
+        alert("Some formula transactions failed. Check logs.");
       }
   
-      // Reset the transaction state after successful logging
+      // Reset transaction state
       setTransaction({ particulars: "", inward: 0, outward: 0, remarks: "" });
-      setLoading(false);
     } catch (error) {
       console.error("Error logging transaction:", error);
-      setErrorMessage("Failed to log transaction.");
+      setErrorMessage(error.message || "Failed to log transaction.");
+    } finally {
       setLoading(false);
     }
   };
+  
   
 
   return (

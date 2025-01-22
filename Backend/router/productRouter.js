@@ -105,6 +105,22 @@ router.get("/:id/logs", async (req, res) => {
       .json({ error: "Error fetching transaction logs", message: err.message });
   }
 });
+router.get("/:id", async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({  product:product });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Error fetching transaction logs", message: err.message });
+  }
+});
 
 // POST a new transaction log for a product
 

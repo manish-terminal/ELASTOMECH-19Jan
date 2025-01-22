@@ -84,7 +84,7 @@ const logIngredientUsage = async (ingredients, numberOfBatches, orderNo, remarks
 };
 
 // Get formula logs by name
-// Get formula logs by name
+
 router.get("/logs/:name", async (req, res) => {
   const { name } = req.params;
 
@@ -96,97 +96,82 @@ router.get("/logs/:name", async (req, res) => {
       return res.status(404).json({ message: "Formula not found" });
     }
 
-    // Retrieve all logs for the formula
-    const logs = formula.logs;
+    // Directly retrieve the logs as they are stored
+    const logs = formula.logs.map(log => log.toObject()); // Convert mongoose documents to plain objects if necessary
 
-    // Calculate the balance for each log entry
-    let runningBalance = 0;
-
-    const updatedLogs = logs.map(log => {
-      const totalBatchWeight = log.batchWeight * log.numberOfBatches;
-      runningBalance += totalBatchWeight;
-
-      // Add the balance field to each log entry
-      return {
-        ...log.toObject(),  // Convert mongoose document to plain object
-        balance: runningBalance
-      };
-    });
-
-    // Return the logs with balance
-    res.json({ logs: updatedLogs });
+    // Return the logs with the stored balance
+    res.json({ logs });
 
   } catch (err) {
-    res.status(500).json({ message: "Error retrieving formula logs", error: err });
+    res.status(500).json({ message: "Error retrieving formula logs", error: err.message });
   }
 });
+
 router.post('/:id/logformulafromproduct', async (req, res) => {
   const { id } = req.params;
-  const date = new Date();
-  const shift = "NA";  // Default values (can be dynamic later)
-  const machineNo = "NA";  
-  const operator = "NA";
-  const batchNo = "NA";
-  const batchWeight = 0;
-  const numberOfBatches = 0;
-
-  const { orderNo, particulars, inward, outward, fillWeight } = req.body;
+  const {
+    orderNo,
+    particulars,
+    inward,
+    outward,
+    fillWeight,
+  } = req.body;
 
   // Validate required fields
   if (!orderNo || !particulars || inward === undefined || outward === undefined || fillWeight === undefined) {
-    return res.status(400).json({ message: "Missing required fields." });  // Ensure return to exit early
+    return res.status(400).json({ message: "Missing required fields." });
   }
 
   try {
     // Fetch formula by ID
     const formula = await Formula.findById(id);
     if (!formula) {
-      return res.status(404).json({ message: 'Formula not found' });  // Ensure return to exit early
+      return res.status(404).json({ message: "Formula not found" });
     }
 
-    // Calculate the total batch weight for this log entry
-    const totalBatchWeight = inward * fillWeight;
+    // Calculate the total weight used
+    const totalWeightUsed = inward * fillWeight;
 
-    // Get the previous balance (if any), or set it to 0 if this is the first log
-    const lastLog = formula.logs[formula.logs.length - 1];
+    // Get previous balance or set it to 0 if this is the first log
+    const lastLog = formula.logs.length > 0 ? formula.logs[formula.logs.length - 1] : null;
     const previousBalance = lastLog ? lastLog.balance : 0;
 
-    // Calculate the new balance by adding the total batch weight to the previous balance
-    const newBalance = previousBalance - totalBatchWeight;
+    // Update the balance using the formula: previousBalance - (fillWeight * inward)
+    const newBalance = previousBalance - totalWeightUsed;
 
-    // Create new log entry
+    // Create a new log entry
     const newLog = {
-      date,
-      shift,
+      date: new Date(),
+      shift: "NA", // Default values, can be made dynamic if needed
       orderNo,
-      machineNo,
-      operator,
-      batchNo,
-      batchWeight,
-      numberOfBatches,
+      machineNo: "NA",
+      operator: "NA",
+      batchNo: "NA",
+      batchWeight: 0, // Optional if not provided
+      numberOfBatches: 0, // Optional if not provided
       remarks: particulars,
       selectedFormulaId: id,
-      balance: newBalance, // Set the new balance here
+      balance: newBalance, // Set the calculated balance here
     };
 
-    // Add log to formula's logs array
+    // Add the log to the formula's logs array
     formula.logs.push(newLog);
     await formula.save();
+    console.log("Fetched Formula:", formula);
+console.log("Last Log:", lastLog);
+console.log("Previous Balance:", previousBalance);
+console.log("Total Weight Used:", totalWeightUsed);
+console.log("New Balance:", newBalance);
 
-    // Optionally, log ingredient usage here (if needed)
-    // await logIngredientUsage(formula.ingredients, numberOfBatches, orderNo, particulars);
-
-    // Send the response only once
-    return res.status(201).json({ message: 'Formula usage logged successfully', newLog });
-
+    // Return success response
+    return res.status(201).json({ message: "Formula usage logged successfully", newLog });
+    
   } catch (error) {
     console.error("Error logging formula usage:", error);
-    // Ensure you only send one response
-    if (!res.headersSent) {
-      return res.status(500).json({ message: 'Error logging formula usage', error: error.message });
-    }
+    return res.status(500).json({ message: "Error logging formula usage", error: error.message });
   }
 });
+
 
 
 
