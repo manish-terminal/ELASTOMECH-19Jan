@@ -11,6 +11,7 @@ const [deliveryDate, setDeliveryDate] = useState("");
 const [remarks, setRemarks] = useState("");
 const [orderNumber, setOrderNumber] = useState(1);
 const [orderDescription, setOrderDescription] = useState("");
+const [selectedProduct, setSelectedProduct] = useState(null); // State for the selected product
 
 const printRef = useRef(); // Ref for the printable section
 
@@ -18,6 +19,70 @@ const [articles, setArticles] = useState([]);
 const [filteredArticles, setFilteredArticles] = useState([]);
 const [searchTerm, setSearchTerm] = useState("");
 const [selectedArticle, setSelectedArticle] = useState("");
+
+const [formulas, setFormulas] = useState([]); // New state to store formulas with names
+
+// Fetch formulas from your API or data source
+useEffect(() => {
+  const fetchFormulas = async () => {
+    try {
+      const response = await axios.get("http://localhost:5001/api/formulas");
+      // Check if response data exists and is in the expected format
+      if (response.data && Array.isArray(response.data)) {
+        setFormulas(response.data); // Store formulas in state
+        console.log("Formulas fetched:", response.data);
+      } else {
+        console.error("Unexpected response format:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching formulas:", error);
+    }
+  };
+
+  fetchFormulas();
+}, []);  // The empty array ensures this runs once when the component mounts
+
+const getFormulaNameById = (formulaId) => {
+  if (!formulaId) {
+    // Handle cases where formulaId is invalid or undefined
+    console.log("Formula ID is invalid:", formulaId);
+    return "Unknown Formula"; 
+  }
+
+  console.log("Formula ID from product:", formulaId); // Log formulaId from product
+
+  // Log the structure of the formulas array
+  console.log("Formulas array structure:", formulas);
+
+  // Loop through the formulas array to find the matching formula ID
+  formulas.forEach(f => {
+    console.log("Formula in list:", f); // Log each formula to understand the structure
+  });
+
+  // Adjust comparison: Check if _id and $oid exist before comparison
+  let formula = formulas.find(f => {
+    // Check if the formula has a _id field with a possible $oid field
+    const formulaIdFromDb = f._id && f._id.$oid ? f._id.$oid : f._id; // Adjust for cases where $oid may be missing
+    console.log("Formula ID in DB:", formulaIdFromDb); // Log formulaId in DB
+    return formulaIdFromDb && String(formulaIdFromDb) === String(formulaId);
+  });
+
+  if (formula) {
+    console.log("Found formula:", formula); // Log found formula
+    return formula.name; // Use 'name' instead of 'formulaName'
+  } else {
+    console.log("Formula not found for ID:", formulaId); // Log if formula is not found
+    return "Unknown Formula"; // Return "Unknown Formula" if not found
+  }
+};
+
+
+
+
+
+
+
+
 
 // Fetch articles from the API
 useEffect(() => {
@@ -69,6 +134,7 @@ const handleArticleSelect = (selectedId) => {
 
   // Find the selected article by _id
   const selectedProduct = articles.find((article) => article._id === selectedId);
+  setSelectedProduct(selectedProduct)
 
   console.log("Articles:", articles); // Log the articles to verify they have the correct _id
   console.log("Selected Product:", selectedProduct); // Ensure we found the correct product
@@ -238,6 +304,24 @@ const handleArticleSelect = (selectedId) => {
         <h3>Summary</h3>
         <p>Item Name: {itemName}</p>
         <p>Order Description: {orderDescription}</p>
+        <p>
+  Formula Used: A total of {weightPerProduct * quantity} kgs, consisting of:
+  {selectedProduct && selectedProduct.formulations
+    ? selectedProduct.formulations.map((formula, index) => {
+        const individualWeight = formula.fillWeight * quantity; // Calculate individual weight for the formula
+        const formulaName = getFormulaNameById(formula.formulaName); // Get the formula name using its ID
+
+        return (
+          <span key={formula._id}>
+            {formulaName} ({individualWeight} kgs)
+            {index < selectedProduct.formulations.length - 1 && ", "}
+          </span>
+        );
+      })
+    : "No formulas available"}
+</p>
+
+
         <p>Delivery Date: {deliveryDate}</p>
         <p>Remarks: {remarks}</p>
 

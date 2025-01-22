@@ -137,7 +137,9 @@ const Orders = () => {
             <thead>
               <tr className="bg-gray-100">
                 <th className="py-2 px-4 text-left text-gray-700">Order ID</th>
+            
                 <th className="py-2 px-4 text-left text-gray-700">Item Name</th>
+                <th className="py-2 px-4 text-left text-gray-700">Quantity</th>
                 <th className="py-2 px-4 text-left text-gray-700">Status</th>
                 <th className="py-2 px-4 text-left text-gray-700">Priority</th>
                 <th className="py-2 px-4 text-left text-gray-700">Actions</th>
@@ -150,7 +152,9 @@ const Orders = () => {
                   className="border-b hover:bg-gray-50 transition-all duration-300"
                 >
                   <td className="py-3 px-4 text-gray-700">{order.orderId}</td>
+               
                   <td className="py-3 px-4 text-gray-700">{order.itemName}</td>
+                  <td className="py-3 px-4 text-gray-700">{order.quantity}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center space-x-2">
                       {order.status === "completed" && (
