@@ -55,27 +55,29 @@ const ProductInventory = () => {
 
   const handleLogTransaction = async (e) => {
     e.preventDefault();
-
+  
     if (!selectedProductId) {
       alert("Please select a product first.");
       return;
     }
-
+  
     if (transaction.inward < 0 || transaction.outward < 0) {
       alert("Inward and outward quantities cannot be negative.");
       return;
     }
-
+  
     if (!transaction.particulars) {
       alert("Particulars are required.");
       return;
     }
-
+  
     setLoading(true);
     setErrorMessage("");
-
+    console.log(selectedProductId);
+  
     try {
-      const response = await fetch(
+      // 1. First API call to log the transaction for the selected product
+      const productResponse = await fetch(
         `http://localhost:5001/api/products/${selectedProductId}/log`,
         {
           method: "POST",
@@ -83,8 +85,45 @@ const ProductInventory = () => {
           body: JSON.stringify(transaction),
         }
       );
-      const updatedProduct = await response.json();
+  
+      if (!productResponse.ok) {
+        throw new Error("Failed to log product transaction.");
+      }
+  
+      const updatedProduct = await productResponse.json();
       setLogs(updatedProduct.logs || []);
+  
+      // 2. Loop through the formulations array and log each formula transaction
+      const formulations = updatedProduct.formulations || [];
+      for (const formula of formulations) {
+        const formulaId = formula.formulaName;
+        const formulaFillWeight = formula.fillWeight;
+        
+        // You can add more details to the body if needed, such as inward quantity.
+        const formulaTransaction = {
+          inward: transaction.inward, // Include inward quantity here
+          particulars: transaction.particulars, // Include particulars
+          fillWeight: formulaFillWeight,
+        };
+  
+        // 2.1 API call to log the formula-specific transaction
+        const formulaResponse = await fetch(
+          `http://localhost:5001/api/${formulaId}/logformulafromproduct`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formulaTransaction),
+          }
+        );
+  
+        if (!formulaResponse.ok) {
+          console.error(`Failed to log formula transaction for formula ${formulaId}`);
+        } else {
+          console.log(`Formula transaction for formula ${formulaId} logged successfully.`);
+        }
+      }
+  
+      // Reset the transaction state after successful logging
       setTransaction({ particulars: "", inward: 0, outward: 0, remarks: "" });
       setLoading(false);
     } catch (error) {
@@ -93,6 +132,7 @@ const ProductInventory = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 shadow-2xl rounded-lg mt-12">

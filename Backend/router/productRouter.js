@@ -1,6 +1,7 @@
 import express from "express";
 import Product from "../models/productModal.js"; // Adjust path as needed
 import Formula from "../models/formulaModal.js"; // Import Formula model to check formula names
+import axios from 'axios';  // Assuming you're using axios
 
 const router = express.Router();
 
@@ -106,15 +107,16 @@ router.get("/:id/logs", async (req, res) => {
 });
 
 // POST a new transaction log for a product
+
+
 router.post("/:id/log", async (req, res) => {
   try {
     const productId = req.params.id;
     const { particulars, inward, outward, remarks } = req.body;
 
+    // Validation for inward and outward quantities
     if (inward < 0 || outward < 0) {
-      return res
-        .status(400)
-        .json({ error: "Inward and outward quantities must be non-negative" });
+      return res.status(400).json({ error: "Inward and outward quantities must be non-negative" });
     }
 
     const product = await Product.findById(productId);
@@ -142,12 +144,25 @@ router.post("/:id/log", async (req, res) => {
     product.transactionLogs.push(newLog);
     await product.save();
 
-    res.status(201).json({ logs: product.transactionLogs });
+    // Send the response to the client, and return immediately
+    return res.status(201).json({ logs: product.transactionLogs });
+
+    // Now handle the second API request (log formula usage) asynchronously
+    // We don't need to send another response here
+    await axios.post(`http://localhost:5001/api/formulas/${ingredient.name}/log`, {
+      particulars: `Used in Order ${orderNo}`,
+      inward: 0,
+      outward: totalMaterialUsed,
+      remarks: `Deduction for ${numberOfBatches} batches of formula ${ingredient.name} Remarks:(${remarks})`,
+    });
+    
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Error logging transaction", message: err.message });
+    console.error(err);  // Log the error to the console for debugging
+    if (!res.headersSent) {  // Check if headers are already sent before sending another response
+      return res.status(500).json({ error: "Error logging transaction", message: err.message });
+    }
   }
 });
+
 
 export default router;

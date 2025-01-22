@@ -120,33 +120,39 @@ router.get("/logs/:name", async (req, res) => {
     res.status(500).json({ message: "Error retrieving formula logs", error: err });
   }
 });
-router.post('/:id/logProduct', async (req, res) => {
+router.post('/:id/logformulafromproduct', async (req, res) => {
   const { id } = req.params;
-  const {
-    date,
-    shift,
-    orderNo,
-    machineNo,
-    operator,
-    batchNo,
-    batchWeight,
-    numberOfBatches,
-    remarks,
-  } = req.body;
+  const date = new Date();
+  const shift = "NA";  // Default values (can be dynamic later)
+  const machineNo = "NA";  
+  const operator = "NA";
+  const batchNo = "NA";
+  const batchWeight = 0;
+  const numberOfBatches = 0;
+
+  const { orderNo, particulars, inward, outward, fillWeight } = req.body;
+
+  // Validate required fields
+  if (!orderNo || !particulars || inward === undefined || outward === undefined || fillWeight === undefined) {
+    return res.status(400).json({ message: "Missing required fields." });  // Ensure return to exit early
+  }
 
   try {
+    // Fetch formula by ID
     const formula = await Formula.findById(id);
-    if (!formula) return res.status(404).json({ message: 'Formula not found' });
+    if (!formula) {
+      return res.status(404).json({ message: 'Formula not found' });  // Ensure return to exit early
+    }
 
     // Calculate the total batch weight for this log entry
-    const totalBatchWeight = batchWeight * numberOfBatches;
+    const totalBatchWeight = inward * fillWeight;
 
     // Get the previous balance (if any), or set it to 0 if this is the first log
     const lastLog = formula.logs[formula.logs.length - 1];
     const previousBalance = lastLog ? lastLog.balance : 0;
 
     // Calculate the new balance by adding the total batch weight to the previous balance
-    const newBalance = previousBalance + totalBatchWeight;
+    const newBalance = previousBalance - totalBatchWeight;
 
     // Create new log entry
     const newLog = {
@@ -158,7 +164,7 @@ router.post('/:id/logProduct', async (req, res) => {
       batchNo,
       batchWeight,
       numberOfBatches,
-      remarks,
+      remarks: particulars,
       selectedFormulaId: id,
       balance: newBalance, // Set the new balance here
     };
@@ -167,15 +173,22 @@ router.post('/:id/logProduct', async (req, res) => {
     formula.logs.push(newLog);
     await formula.save();
 
-    // Log the transaction for each ingredient
-    // await logIngredientUsage(formula.ingredients, numberOfBatches, orderNo, remarks);
+    // Optionally, log ingredient usage here (if needed)
+    // await logIngredientUsage(formula.ingredients, numberOfBatches, orderNo, particulars);
 
-    res.status(201).json({ message: 'Formula usage logged successfully', newLog });
+    // Send the response only once
+    return res.status(201).json({ message: 'Formula usage logged successfully', newLog });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error logging formula usage' });
+    console.error("Error logging formula usage:", error);
+    // Ensure you only send one response
+    if (!res.headersSent) {
+      return res.status(500).json({ message: 'Error logging formula usage', error: error.message });
+    }
   }
 });
+
+
 
 
 export default router;
