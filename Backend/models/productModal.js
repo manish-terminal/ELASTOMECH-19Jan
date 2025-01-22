@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Formula from "./formulaModal.js"; // Assuming the Formula model is here
 
 const transactionLogSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now }, // Date of the transaction
@@ -13,11 +14,17 @@ const productSchema = new mongoose.Schema({
   articleName: { type: String, required: true }, // Name of the product
   image: { type: String }, // Image URL of the product
   articleNo: { type: String, unique: true, required: true }, // Unique identifier for the product
-  mouldingTemp: { type: Number }, // Moulding temperature
+  manufacturing: { 
+    type: String, 
+    enum: ['Moulding', 'Extrusion'], 
+    required: true 
+  },
+  
+  mouldingTemp: { type: String }, // Moulding temperature
   formulations: [
     {
-      formulaId: { type: mongoose.Schema.Types.ObjectId, ref: "Formula" }, // Reference to the formula
-      percentage: { type: Number }, // Percentage of the formula in the product
+      formulaName: { type: String, required: true }, // Store formula name directly
+      fillWeight: { type: Number, required: true }, // Percentage of the formula in the product
     },
   ],
   mouldNo: { type: String }, // Mould number associated with the product

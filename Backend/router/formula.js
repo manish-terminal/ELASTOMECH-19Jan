@@ -120,6 +120,62 @@ router.get("/logs/:name", async (req, res) => {
     res.status(500).json({ message: "Error retrieving formula logs", error: err });
   }
 });
+router.post('/:id/logProduct', async (req, res) => {
+  const { id } = req.params;
+  const {
+    date,
+    shift,
+    orderNo,
+    machineNo,
+    operator,
+    batchNo,
+    batchWeight,
+    numberOfBatches,
+    remarks,
+  } = req.body;
+
+  try {
+    const formula = await Formula.findById(id);
+    if (!formula) return res.status(404).json({ message: 'Formula not found' });
+
+    // Calculate the total batch weight for this log entry
+    const totalBatchWeight = batchWeight * numberOfBatches;
+
+    // Get the previous balance (if any), or set it to 0 if this is the first log
+    const lastLog = formula.logs[formula.logs.length - 1];
+    const previousBalance = lastLog ? lastLog.balance : 0;
+
+    // Calculate the new balance by adding the total batch weight to the previous balance
+    const newBalance = previousBalance + totalBatchWeight;
+
+    // Create new log entry
+    const newLog = {
+      date,
+      shift,
+      orderNo,
+      machineNo,
+      operator,
+      batchNo,
+      batchWeight,
+      numberOfBatches,
+      remarks,
+      selectedFormulaId: id,
+      balance: newBalance, // Set the new balance here
+    };
+
+    // Add log to formula's logs array
+    formula.logs.push(newLog);
+    await formula.save();
+
+    // Log the transaction for each ingredient
+    // await logIngredientUsage(formula.ingredients, numberOfBatches, orderNo, remarks);
+
+    res.status(201).json({ message: 'Formula usage logged successfully', newLog });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error logging formula usage' });
+  }
+});
 
 
 export default router;

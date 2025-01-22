@@ -110,7 +110,7 @@ function AddOrder() {
         </div>
 
         <div>
-          <label htmlFor="weightPerProduct">Weight per Product (kg):</label>
+          <label htmlFor="weightPerProduct">Fill Weight (kg):</label>
           <input
             id="weightPerProduct"
             type="number"

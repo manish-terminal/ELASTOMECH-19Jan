@@ -350,7 +350,7 @@ const FormulaBin = () => {
                         Type
                       </th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                        Ratio (kg)
+                        Weight (kg)
                       </th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                         PHR

@@ -107,7 +107,7 @@ const Inventory = () => {
       </motion.h2>
 
       <div className="flex justify-center mb-6">
-        {/* <button
+        <button
           onClick={handleEditToggle}
           className={`px-6 py-3 rounded-lg shadow-md font-medium text-white ${
             isEditing
@@ -124,7 +124,7 @@ const Inventory = () => {
               <FaEdit className="inline-block mr-2" /> Edit Inventory
             </>
           )}
-        </button> */}
+        </button> 
       </div>
 
       {/* Rubber Section */}

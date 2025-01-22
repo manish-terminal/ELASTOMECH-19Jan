@@ -1,12 +1,13 @@
 import express from "express";
 import Product from "../models/productModal.js"; // Adjust path as needed
+import Formula from "../models/formulaModal.js"; // Import Formula model to check formula names
 
 const router = express.Router();
 
 // GET all products
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find().populate("formulations.formulaId"); // Populate formulas if needed
+    const products = await Product.find(); // No need to populate, as we're using formulaName now
     res.json(products);
   } catch (err) {
     res
@@ -18,10 +19,13 @@ router.get("/", async (req, res) => {
 // POST a new product
 router.post("/", async (req, res) => {
   try {
+    console.log("Incoming Product Data:", req.body);  // Log the data
+
     const {
       articleName,
       image,
       articleNo,
+      manufacturing,
       mouldingTemp,
       formulations,
       mouldNo,
@@ -33,10 +37,31 @@ router.post("/", async (req, res) => {
       lastUpdated,
     } = req.body;
 
-    const newProduct = new Product({
+    // Validate formulations
+    if (formulations && formulations.length > 0) {
+      const invalidFormulas = [];
+
+      for (const formulation of formulations) {
+        const formula = await Formula.findById(formulation.formulaName); 
+                if (!formula) {
+          invalidFormulas.push(formulation.formulaName); // Track invalid formula names
+        }
+      }
+
+      if (invalidFormulas.length > 0) {
+        return res.status(400).json({
+          error: "Invalid formulation(s) provided",
+          invalidFormulas,
+        });
+      }
+    }
+
+    // If lastUpdated is not provided, set it to the current date
+    const productData = {
       articleName,
       image,
       articleNo,
+      manufacturing,
       mouldingTemp,
       formulations,
       mouldNo,
@@ -45,17 +70,22 @@ router.post("/", async (req, res) => {
       expectedCycles,
       noOfLabours,
       hardness,
-      lastUpdated,
-    });
+      lastUpdated: lastUpdated || Date.now(),
+    };
 
+    const newProduct = new Product(productData);
     const savedProduct = await newProduct.save();
+
     res.status(201).json(savedProduct);
   } catch (err) {
-    res
-      .status(400)
-      .json({ error: "Error saving product", message: err.message });
+    console.error(err); // Log error to understand what's going wrong
+    res.status(400).json({
+      error: "Error saving product",
+      message: err.message,
+    });
   }
 });
+
 
 // GET transaction logs for a product
 router.get("/:id/logs", async (req, res) => {

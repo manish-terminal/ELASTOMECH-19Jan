@@ -22,6 +22,7 @@ import InventoryLogging from "./pages/Admin/InventoryLogging";
 import FormulaInventory from "./pages/Admin/FormulaInventory";
 import ProductBin from "./pages/Admin/ProductBin";
 import ProductInventory from "./pages/Admin/ProductInventory";
+import TranslationService from "./utils/TranslationService";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredRole, user }) => {
@@ -106,10 +107,12 @@ const App = () => {
                 path="/admin/productinventory"
                 element={<ProductInventory />}
               />
+           
 
               {/* Catch-all Route */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            {/* <TranslationService/> */}
           </div>
         </div>
       </div>
